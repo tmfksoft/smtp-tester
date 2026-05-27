@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>SMTP Tester</title>
+  <style>
+    :root {
+      --bg:        #1e1e2e;
+      --surface:   #2a2a3e;
+      --surface2:  #313148;
+      --border:    #44445a;
+      --text:      #cdd6f4;
+      --muted:     #9399b2;
+      --accent:    #89b4fa;
+      --green:     #a6e3a1;
+      --red:       #f38ba8;
+      --yellow:    #f9e2af;
+      --console-bg:#11111b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      padding: 10px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      -webkit-app-region: drag;
+    }
+
+    header h1 { font-size: 14px; font-weight: 600; letter-spacing: 0.3px; color: var(--accent); }
+
+    .badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--muted);
+    }
+
+    /* ── Main layout ── */
+    .main-layout {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .top-section {
+      display: grid;
+      grid-template-columns: 310px 1fr;
+      flex: 1;
+      min-height: 0;
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .panel {
+      padding: 14px 16px;
+      overflow-y: auto;
+    }
+
+    .panel + .panel { border-left: 1px solid var(--border); }
+
+    .panel-email {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Panel header row: title left, toggle right */
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .panel-header .panel-title { margin-bottom: 0; }
+
+    .panel-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* ── Mode toggle (SMTP / SES API) ── */
+    .mode-toggle {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .mode-toggle label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      margin-bottom: 0;
+    }
+
+    .mode-toggle label:first-child { border-right: 1px solid var(--border); }
+    .mode-toggle label:has(input:checked) { background: var(--surface2); color: var(--text); }
+    .mode-toggle input[type="radio"] { width: auto; accent-color: var(--accent); }
+
+    /* ── Form fields ── */
+    .field { margin-bottom: 10px; }
+
+    .field label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="password"],
+    select,
+    textarea {
+      width: 100%;
+      background: var(--console-bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      padding: 6px 9px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    select { cursor: pointer; }
+    select option { background: var(--surface); }
+
+    .row { display: flex; gap: 8px; }
+    .row .field { flex: 1; }
+    .row .field.narrow { flex: 0 0 90px; }
+
+    /* ── Checkboxes ── */
+    .checkbox-field {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkbox-field input[type="checkbox"] {
+      width: 15px; height: 15px;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+
+    .checkbox-field span { font-size: 12px; color: var(--text); }
+
+    /* ── Auth fields box ── */
+    .auth-fields {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 10px;
+      margin-top: 4px;
+      transition: opacity 0.2s;
+    }
+
+    .auth-fields.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .auth-fields .field:last-child { margin-bottom: 0; }
+
+    /* ── SES fields box ── */
+    .ses-fields-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 10px;
+      margin-top: 2px;
+    }
+
+    .ses-fields-box .field:last-child { margin-bottom: 0; }
+
+    /* ── Input + icon button group ── */
+    .input-group { display: flex; }
+
+    .input-group input {
+      flex: 1;
+      border-radius: 5px 0 0 5px;
+    }
+
+    .input-group-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      flex-shrink: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: none;
+      border-radius: 0 5px 5px 0;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .input-group-btn:hover { color: var(--text); background: var(--surface); }
+    .input-group-btn:disabled { cursor: not-allowed; }
+
+    /* ── Info button (port reference trigger) ── */
+    .info-btn {
+      display: inline-flex;
+      align-items: center;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      transition: color 0.15s;
+      -webkit-app-region: no-drag;
+    }
+
+    .info-btn:hover { color: var(--accent); }
+
+    /* ── Message body area (inside right panel) ── */
+    .body-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      margin-top: 4px;
+    }
+
+    .body-area-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .body-area-header .panel-title { margin-bottom: 0; }
+
+    .content-type-group {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .content-type-group label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 11px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--muted);
+      transition: background 0.15s, color 0.15s;
+      margin-bottom: 0;
+      font-weight: normal;
+    }
+
+    .content-type-group label:first-child { border-right: 1px solid var(--border); }
+
+    .content-type-group input[type="radio"] {
+      accent-color: var(--accent);
+      width: auto;
+    }
+
+    .content-type-group label:has(input:checked) {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    textarea#body {
+      flex: 1;
+      resize: none;
+      min-height: 80px;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    /* ── Send bar ── */
+    .send-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    button#send {
+      padding: 7px 24px;
+      background: var(--accent);
+      color: #11111b;
+      border: none;
+      border-radius: 5px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      letter-spacing: 0.2px;
+    }
+
+    button#send:hover { opacity: 0.85; }
+    button#send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #status {
+      flex: 1;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #status.idle    { color: var(--muted); }
+    #status.sending { color: var(--yellow); }
+    #status.success { color: var(--green); }
+    #status.error   { color: var(--red); }
+
+    .status-icon { font-size: 16px; line-height: 1; }
+
+    /* ── SMTP Console ── */
+    .console-section {
+      flex: 0 0 200px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .console-header {
+      display: flex;
+      align-items: center;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .console-header .panel-title { margin-bottom: 0; flex: 1; }
+
+    button#clear-console {
+      padding: 3px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    button#clear-console:hover { border-color: var(--accent); color: var(--accent); }
+
+    #console-output {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--console-bg);
+      padding: 10px 14px;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .console-empty { color: var(--muted); font-style: italic; padding: 4px 0; }
+
+    .log-line { white-space: pre-wrap; word-break: break-all; }
+    .log-line.client { color: #89dceb; }
+    .log-line.server { color: var(--green); }
+    .log-line.info   { color: var(--muted); }
+    .log-line.warn   { color: var(--yellow); }
+    .log-line.error  { color: var(--red); }
+
+    #console-output::-webkit-scrollbar { width: 6px; }
+    #console-output::-webkit-scrollbar-track { background: transparent; }
+    #console-output::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Port reference modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    .modal-overlay.active { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 560px;
+      max-width: 92vw;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h2 {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 3px 6px;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .modal-close:hover { color: var(--text); background: var(--surface2); }
+
+    .port-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .port-table th {
+      padding: 8px 16px;
+      text-align: left;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      background: var(--console-bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .port-table td {
+      padding: 10px 16px;
+      font-size: 12px;
+      border-bottom: 1px solid rgba(68, 68, 90, 0.35);
+      vertical-align: middle;
+    }
+
+    .port-table td:first-child { width: 64px; }
+    .port-table td:nth-child(2) { width: 130px; color: var(--muted); }
+
+    .port-table code {
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      background: var(--console-bg);
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      border-radius: 3px;
+      color: var(--accent);
+      font-size: 12px;
+    }
+
+    .port-row { cursor: pointer; transition: background 0.1s; }
+    .port-row:last-child td { border-bottom: none; }
+    .port-row:hover td { background: var(--surface2); }
+
+    .modal-hint {
+      padding: 9px 16px;
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--console-bg);
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>SMTP Tester</h1>
+  <span class="badge">No data is saved</span>
+</header>
+
+<div class="main-layout">
+
+  <div class="top-section">
+
+    <!-- Left: Connection Settings -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Connection</div>
+        <div class="mode-toggle">
+          <label>
+            <input type="radio" name="send-mode" value="smtp" checked> SMTP
+          </label>
+          <label>
+            <input type="radio" name="send-mode" value="ses"> SES API
+          </label>
+        </div>
+      </div>
+
+      <!-- SMTP fields -->
+      <div id="smtp-fields">
+        <div class="row">
+          <div class="field">
+            <label for="host">Host</label>
+            <input type="text" id="host" placeholder="smtp.example.com" spellcheck="false">
+          </div>
+          <div class="field narrow">
+            <label for="port">
+              Port
+              <button type="button" class="info-btn" id="port-info" title="Common port reference">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 16v-4"/>
+                  <path d="M12 8h.01"/>
+                </svg>
+              </button>
+            </label>
+            <input type="number" id="port" value="587" min="1" max="65535">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="security">Security</label>
+          <select id="security">
+            <option value="none">None (Plain)</option>
+            <option value="starttls" selected>STARTTLS</option>
+            <option value="ssl">SSL / TLS</option>
+          </select>
+        </div>
+
+        <label class="checkbox-field">
+          <input type="checkbox" id="allow-self-signed">
+          <span>Allow self-signed / untrusted certificates</span>
+        </label>
+
+        <label class="checkbox-field">
+          <input type="checkbox" id="use-auth" checked>
+          <span>Authentication</span>
+        </label>
+
+        <div class="auth-fields" id="auth-fields">
+          <div class="field">
+            <label for="auth-user">Username</label>
+            <input type="text" id="auth-user" placeholder="user@example.com" spellcheck="false" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="auth-pass">Password</label>
+            <div class="input-group">
+              <input type="password" id="auth-pass" placeholder="••••••••" autocomplete="off">
+              <button type="button" id="toggle-pass" class="input-group-btn" title="Toggle password visibility">
+                <span id="eye-show">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </span>
+                <span id="eye-hide" hidden>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SES API fields -->
+      <div id="ses-fields" hidden>
+        <div class="ses-fields-box">
+          <div class="field">
+            <label for="ses-region">AWS Region</label>
+            <input type="text" id="ses-region" placeholder="us-east-1" spellcheck="false" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="ses-key-id">Access Key ID</label>
+            <input type="text" id="ses-key-id" placeholder="AKIAIOSFODNN7EXAMPLE" spellcheck="false" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="ses-secret-key">Secret Access Key</label>
+            <div class="input-group">
+              <input type="password" id="ses-secret-key" placeholder="••••••••••••••••••••••••••••••••••••••••" autocomplete="off">
+              <button type="button" id="toggle-ses-secret" class="input-group-btn" title="Toggle secret key visibility">
+                <span id="ses-eye-show">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </span>
+                <span id="ses-eye-hide" hidden>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Email + Body -->
+    <div class="panel panel-email">
+      <div class="panel-title">Email</div>
+
+      <div class="field">
+        <label for="from">From</label>
+        <input type="text" id="from" placeholder="sender@example.com" spellcheck="false">
+      </div>
+
+      <div class="field">
+        <label for="to">To</label>
+        <input type="text" id="to" placeholder="recipient@example.com" spellcheck="false">
+      </div>
+
+      <div class="field">
+        <label for="subject">Subject</label>
+        <input type="text" id="subject" value="SMTP Test Email">
+      </div>
+
+      <div class="body-area">
+        <div class="body-area-header">
+          <div class="panel-title">Message Body</div>
+          <div class="content-type-group">
+            <label>
+              <input type="radio" name="content-type" value="text" checked> Plain Text
+            </label>
+            <label>
+              <input type="radio" name="content-type" value="html"> HTML
+            </label>
+          </div>
+        </div>
+        <textarea id="body" spellcheck="false"></textarea>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Send Bar -->
+  <div class="send-bar">
+    <button id="send">Send Test Email</button>
+    <div id="status" class="idle">
+      <span class="status-icon" id="status-icon">&#9679;</span>
+      <span id="status-text">Ready to send</span>
+    </div>
+  </div>
+
+  <!-- SMTP / API Console -->
+  <div class="console-section">
+    <div class="console-header">
+      <div class="panel-title" id="console-title">SMTP Console</div>
+      <button id="clear-console">Clear</button>
+    </div>
+    <div id="console-output">
+      <div class="console-empty">Session log will appear here after sending.</div>
+    </div>
+  </div>
+
+  <!-- Port Reference Modal -->
+  <div class="modal-overlay" id="port-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Common SMTP Ports</h2>
+        <button class="modal-close" id="close-modal" title="Close">&#x2715;</button>
+      </div>
+      <table class="port-table">
+        <thead>
+          <tr>
+            <th>Port</th>
+            <th>Security</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="port-row" data-port="25" data-security="none">
+            <td><code>25</code></td>
+            <td>None (Plain)</td>
+            <td>Server-to-server relay. Outbound typically blocked by ISPs for clients.</td>
+          </tr>
+          <tr class="port-row" data-port="465" data-security="ssl">
+            <td><code>465</code></td>
+            <td>SSL / TLS</td>
+            <td>Legacy SMTPS. Deprecated by RFC but still widely supported.</td>
+          </tr>
+          <tr class="port-row" data-port="587" data-security="starttls">
+            <td><code>587</code></td>
+            <td>STARTTLS</td>
+            <td>Recommended client submission port (RFC 6409). Modern standard.</td>
+          </tr>
+          <tr class="port-row" data-port="2525" data-security="starttls">
+            <td><code>2525</code></td>
+            <td>STARTTLS</td>
+            <td>Alternate submission. Common with some cloud and VPS providers.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="modal-hint">Click a row to apply that port and security setting.</p>
+    </div>
+  </div>
+
+</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>

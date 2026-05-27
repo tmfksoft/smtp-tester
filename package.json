@@ -1,0 +1,58 @@
+{
+  "name": "smtp-test",
+  "version": "1.0.0",
+  "description": "SMTP Testing Tool",
+  "main": "main.js",
+  "author": "tmfksoft",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ses": "^3.0.0",
+    "nodemailer": "^6.9.0"
+  },
+  "build": {
+    "appId": "com.tmfksoft.smtp-test",
+    "productName": "SMTP Tester",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "renderer.js"
+    ],
+    "win": {
+      "target": {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    },
+    "portable": {
+      "artifactName": "smtp-tester-portable-${version}.exe"
+    },
+    "mac": {
+      "target": {
+        "target": "dmg",
+        "arch": ["universal"]
+      },
+      "identity": null
+    },
+    "dmg": {
+      "artifactName": "smtp-tester-${version}-mac.dmg"
+    },
+    "linux": {
+      "target": {
+        "target": "AppImage",
+        "arch": ["x64"]
+      },
+      "artifactName": "smtp-tester-${version}-linux.AppImage"
+    }
+  }
+}
