@@ -1,7 +1,8 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const nodemailer = require('nodemailer');
-const util = require('util');
+const util   = require('util');
+const crypto = require('crypto');
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -149,4 +150,22 @@ ipcMain.handle('send-email', async (event, config) => {
       logs,
     };
   }
+});
+
+ipcMain.handle('derive-ses-smtp', (event, { region, keyId, secretKey }) => {
+  const hmac = (key, msg) => crypto.createHmac('sha256', key).update(msg).digest();
+
+  const VERSION_BYTE = 0x04;
+  const kDate        = hmac('AWS4' + secretKey, '11111111');
+  const kRegion      = hmac(kDate,    region);
+  const kService     = hmac(kRegion,  'ses');
+  const kCredentials = hmac(kService, 'aws4_request');
+  const signature    = hmac(kCredentials, 'SendRawEmail');
+
+  return {
+    host:     `email-smtp.${region}.amazonaws.com`,
+    port:     587,
+    username: keyId,
+    password: Buffer.concat([Buffer.from([VERSION_BYTE]), signature]).toString('base64'),
+  };
 });

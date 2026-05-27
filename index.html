@@ -184,13 +184,26 @@
 
     .checkbox-field span { font-size: 12px; color: var(--text); }
 
-    /* ── Auth fields box ── */
-    .auth-fields {
+    /* ── Unified connection box (server + credentials) ── */
+    .conn-box {
       background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: 5px;
       padding: 10px;
-      margin-top: 4px;
+      margin-bottom: 10px;
+    }
+
+    .conn-box > .field:last-of-type,
+    .conn-box > .row:last-of-type { margin-bottom: 0; }
+
+    .conn-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 8px -10px;
+    }
+
+    .auth-fields {
+      margin-top: 8px;
       transition: opacity 0.2s;
     }
 
@@ -507,6 +520,131 @@
       background: var(--console-bg);
       border-top: 1px solid var(--border);
     }
+
+    /* ── SES create-credentials button ── */
+    .text-link-btn {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      padding: 6px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .text-link-btn:hover { border-color: var(--accent); background: var(--surface); }
+
+    /* ── Derive modal ── */
+    .derive-modal { width: 580px; }
+
+    .derive-body { padding: 16px; }
+
+    .derive-intro {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+
+    .derive-intro code {
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      background: var(--console-bg);
+      padding: 1px 4px;
+      border-radius: 3px;
+      color: var(--text);
+      font-size: 11px;
+    }
+
+    .derive-action-btn {
+      margin-top: 6px;
+      padding: 7px 18px;
+      background: var(--accent);
+      color: #11111b;
+      border: none;
+      border-radius: 5px;
+      font-weight: 600;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .derive-action-btn:hover { opacity: 0.85; }
+
+    .derive-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 14px 0;
+    }
+
+    .result-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(68, 68, 90, 0.25);
+    }
+
+    .result-item:last-of-type { border-bottom: none; }
+
+    .result-label {
+      flex: 0 0 76px;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .result-value {
+      flex: 1;
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      font-size: 12px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    .copy-btn {
+      flex-shrink: 0;
+      padding: 2px 8px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--muted);
+      font-size: 10px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+
+    .copy-btn:hover  { border-color: var(--accent); color: var(--accent); }
+    .copy-btn.copied { border-color: var(--green);  color: var(--green); }
+
+    .apply-btn {
+      display: block;
+      width: 100%;
+      margin-top: 14px;
+      padding: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .apply-btn:hover { border-color: var(--accent); background: var(--surface); }
   </style>
 </head>
 <body>
@@ -536,71 +674,75 @@
 
       <!-- SMTP fields -->
       <div id="smtp-fields">
-        <div class="row">
-          <div class="field">
-            <label for="host">Host</label>
-            <input type="text" id="host" placeholder="smtp.example.com" spellcheck="false">
+        <div class="conn-box">
+          <div class="row">
+            <div class="field">
+              <label for="host">Host</label>
+              <input type="text" id="host" placeholder="smtp.example.com" spellcheck="false">
+            </div>
+            <div class="field narrow">
+              <label for="port">
+                Port
+                <button type="button" class="info-btn" id="port-info" title="Common port reference">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4"/>
+                    <path d="M12 8h.01"/>
+                  </svg>
+                </button>
+              </label>
+              <input type="number" id="port" value="587" min="1" max="65535">
+            </div>
           </div>
-          <div class="field narrow">
-            <label for="port">
-              Port
-              <button type="button" class="info-btn" id="port-info" title="Common port reference">
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="M12 16v-4"/>
-                  <path d="M12 8h.01"/>
-                </svg>
-              </button>
-            </label>
-            <input type="number" id="port" value="587" min="1" max="65535">
+
+          <div class="field" style="margin-bottom:0">
+            <label for="security">Security</label>
+            <select id="security">
+              <option value="none">None (Plain)</option>
+              <option value="starttls" selected>STARTTLS</option>
+              <option value="ssl">SSL / TLS</option>
+            </select>
+          </div>
+
+          <div class="conn-divider"></div>
+
+          <div class="auth-fields" id="auth-fields">
+            <div class="field">
+              <label for="auth-user">Username</label>
+              <input type="text" id="auth-user" placeholder="user@example.com" spellcheck="false" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="auth-pass">Password</label>
+              <div class="input-group">
+                <input type="password" id="auth-pass" placeholder="••••••••" autocomplete="off">
+                <button type="button" id="toggle-pass" class="input-group-btn" title="Toggle password visibility">
+                  <span id="eye-show">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  </span>
+                  <span id="eye-hide" hidden>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div class="field">
-          <label for="security">Security</label>
-          <select id="security">
-            <option value="none">None (Plain)</option>
-            <option value="starttls" selected>STARTTLS</option>
-            <option value="ssl">SSL / TLS</option>
-          </select>
-        </div>
-
-        <label class="checkbox-field">
-          <input type="checkbox" id="allow-self-signed">
-          <span>Allow self-signed / untrusted certificates</span>
-        </label>
 
         <label class="checkbox-field">
           <input type="checkbox" id="use-auth" checked>
           <span>Authentication</span>
         </label>
 
-        <div class="auth-fields" id="auth-fields">
-          <div class="field">
-            <label for="auth-user">Username</label>
-            <input type="text" id="auth-user" placeholder="user@example.com" spellcheck="false" autocomplete="off">
-          </div>
-          <div class="field">
-            <label for="auth-pass">Password</label>
-            <div class="input-group">
-              <input type="password" id="auth-pass" placeholder="••••••••" autocomplete="off">
-              <button type="button" id="toggle-pass" class="input-group-btn" title="Toggle password visibility">
-                <span id="eye-show">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
-                </span>
-                <span id="eye-hide" hidden>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                    <line x1="1" y1="1" x2="23" y2="23"/>
-                  </svg>
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
+        <label class="checkbox-field">
+          <input type="checkbox" id="allow-self-signed">
+          <span>Allow self-signed / untrusted certificates</span>
+        </label>
       </div>
 
       <!-- SES API fields -->
@@ -635,6 +777,9 @@
             </div>
           </div>
         </div>
+        <button type="button" class="text-link-btn" id="open-derive-modal">
+          Create SMTP Credentials
+        </button>
       </div>
     </div>
 
@@ -677,11 +822,11 @@
 
   <!-- Send Bar -->
   <div class="send-bar">
-    <button id="send">Send Test Email</button>
     <div id="status" class="idle">
       <span class="status-icon" id="status-icon">&#9679;</span>
       <span id="status-text">Ready to send</span>
     </div>
+    <button id="send">Send Test Email</button>
   </div>
 
   <!-- SMTP / API Console -->
@@ -734,6 +879,83 @@
         </tbody>
       </table>
       <p class="modal-hint">Click a row to apply that port and security setting.</p>
+    </div>
+  </div>
+
+  <!-- Derive SES SMTP Credentials Modal -->
+  <div class="modal-overlay" id="derive-modal">
+    <div class="modal derive-modal">
+      <div class="modal-header">
+        <h2>Create SES SMTP Credentials</h2>
+        <button class="modal-close" id="close-derive-modal" title="Close">&#x2715;</button>
+      </div>
+      <div class="derive-body">
+        <p class="derive-intro">Converts an IAM access key into the SMTP password required by <code>email-smtp.{region}.amazonaws.com</code>. Uses the AWS v4 signing algorithm with a fixed version prefix byte.</p>
+
+        <div class="row">
+          <div class="field">
+            <label for="derive-region">Region</label>
+            <input type="text" id="derive-region" placeholder="us-east-1" spellcheck="false" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="derive-key-id">Access Key ID</label>
+            <input type="text" id="derive-key-id" placeholder="AKIAIOSFODNN7EXAMPLE" spellcheck="false" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="derive-secret">Secret Access Key</label>
+          <div class="input-group">
+            <input type="password" id="derive-secret" placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" autocomplete="off">
+            <button type="button" id="toggle-derive-secret" class="input-group-btn" title="Toggle visibility">
+              <span id="derive-eye-show">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </span>
+              <span id="derive-eye-hide" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <button type="button" id="derive-btn" class="derive-action-btn">Create Credentials</button>
+
+        <div id="derive-results" hidden>
+          <div class="derive-divider"></div>
+
+          <div class="result-item">
+            <span class="result-label">Host</span>
+            <span class="result-value" id="res-host"></span>
+            <button type="button" class="copy-btn" data-result="host">Copy</button>
+          </div>
+          <div class="result-item">
+            <span class="result-label">Port</span>
+            <span class="result-value">587 — STARTTLS</span>
+          </div>
+          <div class="result-item">
+            <span class="result-label">Username</span>
+            <span class="result-value" id="res-username"></span>
+            <button type="button" class="copy-btn" data-result="username">Copy</button>
+          </div>
+          <div class="result-item">
+            <span class="result-label">Password</span>
+            <span class="result-value">
+              <span id="res-pass-masked">&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;</span>
+              <span id="res-pass-plain" hidden></span>
+            </span>
+            <button type="button" id="reveal-pass-btn" class="copy-btn">Reveal</button>
+            <button type="button" class="copy-btn" data-result="password">Copy</button>
+          </div>
+
+          <button type="button" id="apply-smtp-btn" class="apply-btn">↗ Apply to SMTP</button>
+        </div>
+      </div>
     </div>
   </div>
 

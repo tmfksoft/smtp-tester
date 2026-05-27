@@ -119,8 +119,13 @@ portModal.addEventListener('click', e => {
   if (e.target === portModal) portModal.classList.remove('active');
 });
 
+const deriveModal = document.getElementById('derive-modal');
+
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') portModal.classList.remove('active');
+  if (e.key === 'Escape') {
+    portModal.classList.remove('active');
+    deriveModal.classList.remove('active');
+  }
 });
 
 document.querySelectorAll('.port-row').forEach(row => {
@@ -190,6 +195,117 @@ sendBtn.addEventListener('click', async () => {
 });
 
 clearConsoleBtn.addEventListener('click', clearConsole);
+
+// ── Derive SES SMTP credentials modal ────────────────────────────
+let lastDerived = null;
+
+const deriveRegionInput = document.getElementById('derive-region');
+const deriveKeyIdInput  = document.getElementById('derive-key-id');
+const deriveSecretInput = document.getElementById('derive-secret');
+
+document.getElementById('open-derive-modal').addEventListener('click', () => {
+  // Pre-fill from SES fields if they're populated
+  if (sesRegion.value)    deriveRegionInput.value = sesRegion.value;
+  if (sesKeyId.value)     deriveKeyIdInput.value  = sesKeyId.value;
+  if (sesSecretKey.value) deriveSecretInput.value  = sesSecretKey.value;
+
+  document.getElementById('derive-results').hidden = true;
+  lastDerived = null;
+  deriveModal.classList.add('active');
+});
+
+document.getElementById('close-derive-modal').addEventListener('click', () => {
+  deriveModal.classList.remove('active');
+});
+
+deriveModal.addEventListener('click', e => {
+  if (e.target === deriveModal) deriveModal.classList.remove('active');
+});
+
+document.getElementById('toggle-derive-secret').addEventListener('click', () => {
+  const isHidden = deriveSecretInput.type === 'password';
+  deriveSecretInput.type = isHidden ? 'text' : 'password';
+  document.getElementById('derive-eye-show').hidden = isHidden;
+  document.getElementById('derive-eye-hide').hidden = !isHidden;
+});
+
+document.getElementById('derive-btn').addEventListener('click', async () => {
+  const region    = deriveRegionInput.value.trim();
+  const keyId     = deriveKeyIdInput.value.trim();
+  const secretKey = deriveSecretInput.value;
+
+  if (!region || !keyId || !secretKey) return;
+
+  lastDerived = await window.smtp.deriveSmtp({ region, keyId, secretKey });
+
+  document.getElementById('res-host').textContent     = lastDerived.host;
+  document.getElementById('res-username').textContent  = lastDerived.username;
+  document.getElementById('res-pass-plain').textContent = lastDerived.password;
+  document.getElementById('res-pass-masked').hidden   = false;
+  document.getElementById('res-pass-plain').hidden    = true;
+  document.getElementById('reveal-pass-btn').textContent = 'Reveal';
+  document.getElementById('derive-results').hidden    = false;
+});
+
+document.getElementById('reveal-pass-btn').addEventListener('click', () => {
+  const masked = document.getElementById('res-pass-masked');
+  const plain  = document.getElementById('res-pass-plain');
+  const btn    = document.getElementById('reveal-pass-btn');
+  if (plain.hidden) {
+    masked.hidden = true;
+    plain.hidden  = false;
+    btn.textContent = 'Hide';
+  } else {
+    masked.hidden = false;
+    plain.hidden  = true;
+    btn.textContent = 'Reveal';
+  }
+});
+
+document.querySelectorAll('.copy-btn[data-result]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (!lastDerived) return;
+    const value = lastDerived[btn.dataset.result];
+    if (value == null) return;
+    navigator.clipboard.writeText(String(value));
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+  });
+});
+
+document.getElementById('apply-smtp-btn').addEventListener('click', () => {
+  if (!lastDerived) return;
+
+  // Switch to SMTP mode
+  document.querySelector('input[name="send-mode"][value="smtp"]').checked = true;
+  sendMode = 'smtp';
+  smtpFields.hidden = false;
+  sesFields.hidden  = true;
+  consoleTitle.textContent = 'SMTP Console';
+
+  // Fill server fields
+  host.value     = lastDerived.host;
+  port.value     = '587';
+  security.value = 'starttls';
+
+  // Enable and fill auth
+  useAuth.checked        = true;
+  authUser.disabled      = false;
+  authPass.disabled      = false;
+  togglePassBtn.disabled = false;
+  authFields.classList.remove('disabled');
+  authUser.value = lastDerived.username;
+  authPass.value = lastDerived.password;
+
+  // Ensure password is masked
+  authPass.type = 'password';
+  document.getElementById('eye-show').hidden = false;
+  document.getElementById('eye-hide').hidden = true;
+
+  deriveModal.classList.remove('active');
+});
 
 function setStatus(cls, icon, text) {
   statusEl.className = cls;
