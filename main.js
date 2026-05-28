@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const fs   = require('fs');
 const nodemailer = require('nodemailer');
 const util   = require('util');
 const crypto = require('crypto');
@@ -75,6 +76,13 @@ ipcMain.handle('send-email', async (event, config) => {
     mailOptions.text = config.body;
   }
 
+  if (config.attachments && config.attachments.length > 0) {
+    mailOptions.attachments = config.attachments.map(a => ({
+      filename: a.name,
+      path: a.path,
+    }));
+  }
+
   // ── SES API mode ────────────────────────────────────────────────
   if (config.sendMode === 'ses') {
     logs.push({ level: 'info',  text: `   AWS SES API` });
@@ -83,6 +91,9 @@ ipcMain.handle('send-email', async (event, config) => {
     logs.push({ level: 'debug', text: `   From:    ${config.from}` });
     logs.push({ level: 'debug', text: `   To:      ${config.to}` });
     logs.push({ level: 'debug', text: `   Subject: ${config.subject}` });
+    if (config.attachments && config.attachments.length > 0) {
+      logs.push({ level: 'debug', text: `   Attachments: ${config.attachments.map(a => a.name).join(', ')}` });
+    }
 
     try {
       const { SESClient } = require('@aws-sdk/client-ses');
@@ -168,4 +179,17 @@ ipcMain.handle('derive-ses-smtp', (event, { region, keyId, secretKey }) => {
     username: keyId,
     password: Buffer.concat([Buffer.from([VERSION_BYTE]), signature]).toString('base64'),
   };
+});
+
+ipcMain.handle('select-files', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile', 'multiSelections'],
+    title: 'Select Attachments',
+  });
+  if (result.canceled) return [];
+  return result.filePaths.map(p => ({
+    path: p,
+    name: path.basename(p),
+    size: fs.statSync(p).size,
+  }));
 });

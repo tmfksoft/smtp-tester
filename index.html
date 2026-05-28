@@ -645,6 +645,73 @@
     }
 
     .apply-btn:hover { border-color: var(--accent); background: var(--surface); }
+
+    /* ── Attachments ── */
+    .attach-section { margin-bottom: 8px; }
+
+    .attach-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .attach-bar .panel-title { margin-bottom: 0; }
+
+    .attach-add-btn {
+      padding: 2px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .attach-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .attach-list { display: flex; flex-direction: column; gap: 3px; }
+
+    .attach-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+
+    .attach-name {
+      flex: 1;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    .attach-size {
+      font-size: 11px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .attach-remove {
+      flex-shrink: 0;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 2px;
+      transition: color 0.15s;
+    }
+
+    .attach-remove:hover { color: var(--red); }
   </style>
 </head>
 <body>
@@ -800,6 +867,14 @@
       <div class="field">
         <label for="subject">Subject</label>
         <input type="text" id="subject" value="SMTP Test Email">
+      </div>
+
+      <div class="attach-section">
+        <div class="attach-bar">
+          <div class="panel-title">Attachments</div>
+          <button type="button" id="add-attach-btn" class="attach-add-btn">+ Add Files</button>
+        </div>
+        <div class="attach-list" id="attach-list"></div>
       </div>
 
       <div class="body-area">

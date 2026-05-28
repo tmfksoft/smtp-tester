@@ -19,6 +19,35 @@ const DEFAULT_HTML_BODY =
 </body>
 </html>`;
 
+// ── Attachment state ──────────────────────────────────────────────
+let attachments = [];
+
+function formatSize(bytes) {
+  if (bytes < 1024)        return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function renderAttachments() {
+  const list = document.getElementById('attach-list');
+  list.innerHTML = '';
+  attachments.forEach((a, i) => {
+    const item = document.createElement('div');
+    item.className = 'attach-item';
+    item.innerHTML =
+      `<span class="attach-name" title="${a.path}">${a.name}</span>` +
+      `<span class="attach-size">${formatSize(a.size)}</span>` +
+      `<button class="attach-remove" data-index="${i}" title="Remove">&#x2715;</button>`;
+    list.appendChild(item);
+  });
+  list.querySelectorAll('.attach-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      attachments.splice(parseInt(btn.dataset.index, 10), 1);
+      renderAttachments();
+    });
+  });
+}
+
 // ── Element refs ──────────────────────────────────────────────────
 const host            = document.getElementById('host');
 const port            = document.getElementById('port');
@@ -158,6 +187,7 @@ sendBtn.addEventListener('click', async () => {
     subject:         subject.value.trim(),
     contentType:     currentType,
     body:            body.value,
+    attachments:     attachments.slice(),
   };
 
   if (sendMode === 'smtp') {
@@ -195,6 +225,15 @@ sendBtn.addEventListener('click', async () => {
 });
 
 clearConsoleBtn.addEventListener('click', clearConsole);
+
+// ── Attachments ───────────────────────────────────────────────────
+document.getElementById('add-attach-btn').addEventListener('click', async () => {
+  const files = await window.smtp.selectFiles();
+  files.forEach(f => {
+    if (!attachments.some(a => a.path === f.path)) attachments.push(f);
+  });
+  renderAttachments();
+});
 
 // ── Derive SES SMTP credentials modal ────────────────────────────
 let lastDerived = null;
